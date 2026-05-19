@@ -109,7 +109,7 @@
 </div>
 
 <script>
-const API = 'http://aptechka.kuznetsovs.netcraze.link';
+const API = 'https://aptechka.kuznetsovs.netcraze.link';
 let MEDICINES = [];
 
 const SYMPTOMS = [
@@ -133,12 +133,26 @@ const FALLBACK = [
 ];
 
 async function loadMedicines() {
+  // Показываем кэш сразу
+  const cached = localStorage.getItem('aptechka_medicines');
+  if (cached) {
+    try {
+      MEDICINES = JSON.parse(cached);
+      renderSymptoms();
+    } catch(e) {}
+  }
+  // Обновляем в фоне
   try {
     const r = await fetch(API+'/medicines', {mode:'cors'});
     const d = await r.json();
-    MEDICINES = d.length ? d : FALLBACK;
-  } catch(e) { MEDICINES = FALLBACK; }
-  renderSymptoms();
+    if (d.length) {
+      MEDICINES = d;
+      localStorage.setItem('aptechka_medicines', JSON.stringify(d));
+      renderSymptoms();
+    }
+  } catch(e) {
+    if (!MEDICINES.length) { MEDICINES = FALLBACK; renderSymptoms(); }
+  }
 }
 
 async function saveMedicines() {
