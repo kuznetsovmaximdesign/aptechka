@@ -108,6 +108,54 @@
   <div class="detail-sheet"><div class="detail-handle"></div><div id="detailContent"></div></div>
 </div>
 
+<div class="add-screen" id="addScreen">
+  <div class="form-group">
+    <label class="form-label">Название препарата *</label>
+    <input type="text" class="form-input" id="fName" placeholder="Например: Нурофен 400мг">
+  </div>
+  <div class="form-group">
+    <label class="form-label">Действующее вещество *</label>
+    <input type="text" class="form-input" id="fSubstance" placeholder="Например: Ибупрофен">
+  </div>
+  <div class="form-group">
+    <label class="form-label">Категория</label>
+    <input type="text" class="form-input" id="fCategory" placeholder="Например: Обезболивающее">
+  </div>
+  <div class="form-group">
+    <label class="form-label">Коробка *</label>
+    <div class="box-btns">
+      <button class="box-btn" onclick="selectBox(1)" id="box1btn">1 — острое</button>
+      <button class="box-btn" onclick="selectBox(2)" id="box2btn">2 — простуда</button>
+      <button class="box-btn" onclick="selectBox(3)" id="box3btn">3 — хроническое</button>
+      <button class="box-btn" onclick="selectBox('f')" id="boxfbtn">❄️ Холодильник</button>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Количество</label>
+    <input type="text" class="form-input" id="fQty" placeholder="Например: 20 таб.">
+  </div>
+  <div class="form-group">
+    <label class="form-label">Срок годности (мм/гггг)</label>
+    <input type="text" class="form-input" id="fExpiry" placeholder="Например: 12/2027">
+  </div>
+  <div class="form-group">
+    <label class="form-label">Симптомы</label>
+    <div class="symptom-checks" id="symptomChecks"></div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Способ применения *</label>
+    <textarea class="form-textarea" id="fUsage" placeholder="Например: 1 таб. 3 р/день после еды"></textarea>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Рецептурный</label>
+    <div class="rx-toggle">
+      <button class="rx-btn selected" id="rxNo" onclick="selectRx(0)">Нет</button>
+      <button class="rx-btn" id="rxYes" onclick="selectRx(1)">Rx — да</button>
+    </div>
+  </div>
+  <button class="save-btn" onclick="saveMedicine()">💾 Сохранить</button>
+</div>
+
 <script>
 const API = 'https://aptechka.kuznetsovs.netcraze.link';
 let MEDICINES = [];
@@ -131,6 +179,100 @@ const FALLBACK = [
   {"n":"Цетрин 10мг","b":2,"a":"Цетиризин","c":"Аллергия","q":"17 таб.","e":"02/2027","rx":0,"t":["allergy","nose"],"u":"1 таб. 1 р/день вечером."},
   {"n":"Омепразол","b":3,"a":"Омепразол","c":"ЖКТ — кислотность","q":"30 капс.","e":"04/2027","rx":0,"t":["gut","hangover"],"u":"1 капс. утром до еды."},
 ];
+
+let selectedBox = null;
+let selectedRx = 0;
+let selectedSymptoms = new Set();
+
+function openAddForm() {
+  // Reset form
+  document.getElementById('fName').value = '';
+  document.getElementById('fSubstance').value = '';
+  document.getElementById('fCategory').value = '';
+  document.getElementById('fQty').value = '';
+  document.getElementById('fExpiry').value = '';
+  document.getElementById('fUsage').value = '';
+  selectedBox = null;
+  selectedRx = 0;
+  selectedSymptoms = new Set();
+  document.querySelectorAll('.box-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('rxNo').classList.add('selected');
+  document.getElementById('rxYes').classList.remove('selected');
+
+  // Render symptom checkboxes
+  const checks = document.getElementById('symptomChecks');
+  checks.innerHTML = SYMPTOMS.map(s => `
+    <div class="symptom-check" id="sc_${s.key}" onclick="toggleSymptom('${s.key}')">
+      ${s.emoji} ${s.label}
+    </div>
+  `).join('');
+
+  document.getElementById('symptomsScreen').classList.add('hidden');
+  document.getElementById('addScreen').classList.add('visible');
+  document.getElementById('headerTitle').textContent = 'Новый препарат';
+  document.getElementById('backBtn').classList.add('visible');
+}
+
+function selectBox(val) {
+  selectedBox = val;
+  document.querySelectorAll('.box-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('box'+val+'btn').classList.add('selected');
+}
+
+function selectRx(val) {
+  selectedRx = val;
+  document.getElementById('rxNo').classList.toggle('selected', val===0);
+  document.getElementById('rxYes').classList.toggle('selected', val===1);
+}
+
+function toggleSymptom(key) {
+  const el = document.getElementById('sc_'+key);
+  if (selectedSymptoms.has(key)) {
+    selectedSymptoms.delete(key);
+    el.classList.remove('selected');
+  } else {
+    selectedSymptoms.add(key);
+    el.classList.add('selected');
+  }
+}
+
+function closeAddForm() {
+  document.getElementById('addScreen').classList.remove('visible');
+  document.getElementById('symptomsScreen').classList.remove('hidden');
+  document.getElementById('headerTitle').textContent = '🏥 Аптечка';
+  document.getElementById('backBtn').classList.remove('visible');
+}
+
+async function saveMedicine() {
+  const name = document.getElementById('fName').value.trim();
+  const substance = document.getElementById('fSubstance').value.trim();
+  const usage = document.getElementById('fUsage').value.trim();
+
+  if (!name || !substance || !usage || !selectedBox) {
+    alert('Заполни обязательные поля: название, вещество, коробку и применение');
+    return;
+  }
+
+  const med = {
+    n: name,
+    a: substance,
+    c: document.getElementById('fCategory').value.trim(),
+    b: selectedBox,
+    q: document.getElementById('fQty').value.trim(),
+    e: document.getElementById('fExpiry').value.trim(),
+    t: Array.from(selectedSymptoms),
+    u: usage,
+    rx: selectedRx,
+    out_of_stock: false
+  };
+
+  MEDICINES.push(med);
+  await saveMedicines();
+  // Update cache
+  localStorage.setItem('aptechka_medicines', JSON.stringify(MEDICINES));
+  closeAddForm();
+  alert('✅ Препарат добавлен!');
+}
 
 async function loadMedicines() {
   // Показываем кэш сразу
