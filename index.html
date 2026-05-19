@@ -192,7 +192,14 @@ let currentSymKey='', currentSymLabel='';
 function showSymptom(key, label) {
   currentSymKey=key; currentSymLabel=label;
   const meds = MEDICINES.map((m,i)=>({...m,_idx:i})).filter(m=>m.t.includes(key));
-  if (!meds.length) return;
+  if (!meds.length) {
+    document.getElementById('medicinesScreen').innerHTML = '<div class="empty-state"><div class="empty-emoji">💊</div>Препаратов для этого симптома нет в базе</div>';
+    document.getElementById('medicinesScreen').classList.add('visible');
+    document.getElementById('symptomsScreen').classList.add('hidden');
+    document.getElementById('headerTitle').textContent = label;
+    document.getElementById('backBtn').classList.add('visible');
+    return;
+  }
   const groups = {};
   meds.forEach(m => { if(!groups[m.a]) groups[m.a]=[]; groups[m.a].push(m); });
   let html='';
